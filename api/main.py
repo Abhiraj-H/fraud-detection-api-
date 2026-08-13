@@ -302,7 +302,7 @@ def drift_check(batch: FeatureBatch):
 # Legacy endpoints (backward compat)
 # ─────────────────────────────────────────────────────────────────────────────
 
-@app.post("/predict-legacy", tags=["Legacy"])
+@app.post("/predict-legacy", include_in_schema=False)
 def predict_legacy(request: PredictionRequest):
     """Flat 30-float list → fraud probability (no SHAP). Kept for test suites."""
     _require_model()
@@ -320,7 +320,7 @@ def predict_legacy(request: PredictionRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/drift", tags=["Legacy"])
+@app.post("/drift", include_in_schema=False)
 def drift_legacy(request: DriftRequest):
     """Single-vector PSI + KS comparison (legacy endpoint)."""
     try:
