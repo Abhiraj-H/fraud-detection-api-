@@ -180,8 +180,14 @@ def _get_shap_reasons(features_row: np.ndarray, top_n: int = 3) -> list[ShapReas
 # Endpoints
 # ─────────────────────────────────────────────────────────────────────────────
 
+from fastapi.responses import FileResponse
+
 @app.get("/", tags=["Meta"])
 def root():
+    """Serve the Enterprise Dashboard UI."""
+    frontend_path = os.path.join(BASE_DIR, "frontend", "index.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
     return {
         "service": "Fraud Detection API",
         "version": MODEL_VERSION,
