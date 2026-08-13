@@ -89,11 +89,22 @@ async def lifespan(app: FastAPI):
 # App
 # ─────────────────────────────────────────────────────────────────────────────
 
+from fastapi.openapi.docs import get_swagger_ui_html
+
 app = FastAPI(
     title="Fraud Detection API",
-    description="Real-time credit-card fraud scoring with SHAP explanations and drift monitoring.",
+    description="""
+    Production-grade credit card fraud detection API.
+
+    Features:
+    • Real-time fraud scoring
+    • SHAP-based explainability
+    • Model health monitoring
+    • Data drift detection
+    """,
     version=MODEL_VERSION,
     lifespan=lifespan,
+    docs_url=None,  # We will implement a custom docs endpoint
 )
 
 app.add_middleware(
@@ -181,6 +192,21 @@ def _get_shap_reasons(features_row: np.ndarray, top_n: int = 3) -> list[ShapReas
 # ─────────────────────────────────────────────────────────────────────────────
 
 from fastapi.responses import FileResponse
+
+@app.get("/docs", include_in_schema=False)
+async def custom_docs():
+    return get_swagger_ui_html(
+        openapi_url=app.openapi_url,
+        title="Fraud Detection API | API Docs",
+        swagger_ui_parameters={
+            "docExpansion": "none",
+            "defaultModelsExpandDepth": -1,
+            "displayRequestDuration": True,
+            "filter": True,
+            "tryItOutEnabled": True,
+            "persistAuthorization": True,
+        },
+    )
 
 @app.get("/", tags=["Meta"])
 def root():
