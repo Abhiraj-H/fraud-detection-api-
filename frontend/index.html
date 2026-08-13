@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FraudShield Console</title>
+  <meta name="description" content="Enterprise Fraud Detection Platform" />
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    /* ── Reset & Base Variables ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      /* Colors: Deep zinc/navy */
+      --bg-base: #09090b;
+      --bg-surface: #18181b;
+      --bg-hover: #27272a;
+      
+      --border: #27272a;
+      --border-focus: #3f3f46;
+      
+      --text-main: #f4f4f5;
+      --text-muted: #a1a1aa;
+      --text-placeholder: #52525b;
+      
+      /* Semantic Accents */
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      
+      --status-ok: #10b981;
+      --status-ok-bg: rgba(16, 185, 129, 0.1);
+      
+      --status-warn: #f59e0b;
+      --status-warn-bg: rgba(245, 158, 11, 0.1);
+      
+      --status-crit: #ef4444;
+      --status-crit-bg: rgba(239, 68, 68, 0.1);
+      
+      /* Typography */
+      --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      --text-h1: 24px;
+      --text-h2: 16px;
+      --text-kpi: 28px;
+      --text-body: 13px;
+      --text-small: 12px;
+      
+      /* Spacing & Radii */
+      --spacing-xs: 4px;
+      --spacing-sm: 8px;
+      --spacing-md: 16px;
+      --spacing-lg: 24px;
+      --spacing-xl: 32px;
+      
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.5);
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-size: var(--text-body);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-y: scroll;
+    }
+
+    /* ── Layout Shell ── */
+    .app-shell {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      background-color: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      width: 240px;
+      height: 100vh;
+      z-index: 100;
+    }
+    
+    .sidebar-header {
+      height: 56px;
+      padding: 0 var(--spacing-md);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .logo-icon {
+      color: var(--accent-blue);
+      display: flex;
+      align-items: center;
+    }
+    
+    .logo-text {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .nav-menu {
+      padding: var(--spacing-md) var(--spacing-sm);
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-xs);
+      flex: 1;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      padding: 8px var(--spacing-sm);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background-color 0.15s, color 0.15s;
+      font-weight: 500;
+    }
+    
+    .nav-item:hover {
+      background-color: var(--bg-hover);
+      color: var(--text-main);
+    }
+    
+    .nav-item.active {
+      background-color: var(--bg-hover);
+      color: var(--text-main);
+      box-shadow: inset 3px 0 0 var(--accent-blue);
+    }
+
+    .sidebar-footer {
+      padding: var(--spacing-md);
+      border-top: 1px solid var(--border);
+      font-size: var(--text-small);
+      color: var(--text-muted);
+    }
+    
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: var(--spacing-sm);
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--status-ok);
+    }
+    
+    .status-dot.offline { background-color: var(--status-crit); }
+
+    /* ── Main Content Area ── */
+    .main-wrapper {
+      grid-column: 2;
+      display: flex;
+      flex-direction: column;
+      min-width: 0; /* prevents flex blowout */
+    }
+
+    /* ── Top Header ── */
+    .top-header {
+      height: 56px;
+      background-color: var(--bg-base);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--spacing-lg);
+      position: sticky;
+      top: 0;
+      z-index: 90;
+    }
+    
+    .header-context {
+      display: flex;
+      gap: var(--spacing-lg);
+      align-items: center;
+      font-size: var(--text-small);
+      color: var(--text-muted);
+    }
+    
+    .context-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .tag-simulated {
+      background-color: var(--status-warn-bg);
+      color: var(--status-warn);
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+    
+    .tag-production {
+      background-color: var(--status-ok-bg);
+      color: var(--status-ok);
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    /* ── Page Content ── */
+    .content-container {
+      padding: var(--spacing-xl);
+      max-width: 1400px; /* Restrict width for ultrawide monitors */
+      width: 100%;
+      margin: 0 auto;
+      flex: 1;
+    }
+
+    .page-header {
+      margin-bottom: var(--spacing-xl);
+    }
+    
+    .page-title {
+      font-size: var(--text-h1);
+      font-weight: 600;
+      color: var(--text-main);
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+    
+    .page-desc {
+      color: var(--text-muted);
+    }
+
+    /* Sections visibility */
+    .view-section { display: none; }
+    .view-section.active { display: block; }
+
+    /* ── Cards & Panels ── */
+    .panel {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .panel-header {
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .panel-title {
+      font-size: var(--text-h2);
+      font-weight: 600;
+    }
+    
+    .panel-body {
+      padding: var(--spacing-lg);
+      flex: 1;
+    }
+
+    /* ── Grid Layouts ── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg); }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--spacing-lg); }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--spacing-md); }
+    
+    /* Layout specific to Live Prediction */
+    .predict-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr);
+      gap: var(--spacing-lg);
+    }
+
+    /* ── KPIs ── */
+    .kpi-block {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-md);
+    }
+    
+    .kpi-label {
+      font-size: var(--text-small);
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    
+    .kpi-value {
+      font-size: var(--text-kpi);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    
+    .kpi-meta {
+      margin-top: 4px;
+      font-size: var(--text-small);
+      color: var(--text-muted);
+    }
+
+    /* ── Forms & Inputs ── */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-xs);
+      margin-bottom: var(--spacing-md);
+    }
+    
+    label {
+      font-size: var(--text-small);
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    
+    input[type="number"], input[type="text"] {
+      background-color: var(--bg-base);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      font-family: 'Inter', monospace;
+      font-size: 13px;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+    
+    input:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Slider */
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--text-main);
+      cursor: pointer;
+      border: 2px solid var(--bg-surface);
+    }
+
+    /* Feature Grid for Predict */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: var(--spacing-sm);
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+    }
+    
+    .btn-primary {
+      background-color: var(--text-main);
+      color: var(--bg-base);
+    }
+    .btn-primary:hover:not(:disabled) { background-color: #d4d4d8; }
+    
+    .btn-secondary {
+      background-color: var(--bg-hover);
+      border-color: var(--border);
+      color: var(--text-main);
+    }
+    .btn-secondary:hover:not(:disabled) { background-color: var(--border-focus); }
+    
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .loader {
+      width: 14px;
+      height: 14px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Tables ── */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    
+    th {
+      font-size: var(--text-small);
+      font-weight: 500;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 12px;
+      background-color: var(--bg-surface);
+      position: sticky;
+      top: 0;
+    }
+    
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    
+    tbody tr:hover {
+      background-color: var(--bg-hover);
+    }
+    
+    .num-cell {
+      text-align: right;
+      font-family: 'Inter', monospace;
+    }
+    
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+    .badge-ok { background-color: var(--status-ok-bg); color: var(--status-ok); border: 1px solid rgba(16,185,129,0.2); }
+    .badge-warn { background-color: var(--status-warn-bg); color: var(--status-warn); border: 1px solid rgba(245,158,11,0.2); }
+    .badge-crit { background-color: var(--status-crit-bg); color: var(--status-crit); border: 1px solid rgba(239,68,68,0.2); }
+    .badge-neutral { background-color: var(--bg-hover); color: var(--text-muted); border: 1px solid var(--border); }
+
+    /* ── Risk Bar (replaces gauge) ── */
+    .risk-bar-container {
+      margin-bottom: var(--spacing-xl);
+    }
+    .risk-bar-track {
+      height: 8px;
+      background-color: var(--bg-base);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+      border: 1px solid var(--border);
+    }
+    .risk-bar-fill {
+      height: 100%;
+      width: 0%;
+      background-color: var(--text-muted);
+      transition: width 0.5s ease-out, background-color 0.3s;
+    }
+    .risk-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .risk-score {
+      font-size: 32px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    
+    /* ── SHAP Visuals ── */
+    .shap-row {
+      display: grid;
+      grid-template-columns: 80px 1fr 60px;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .shap-label {
+      font-size: 12px;
+      font-weight: 500;
+      text-align: right;
+    }
+    .shap-val {
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: right;
+    }
+    .shap-track {
+      height: 6px;
+      background-color: var(--bg-base);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .shap-fill {
+      height: 100%;
+      border-radius: 3px;
+    }
+    .shap-pos { background-color: var(--status-crit); }
+    .shap-neg { background-color: var(--accent-blue); }
+
+    /* Empty state */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--spacing-xl) 0;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    .empty-icon {
+      color: var(--border-focus);
+      margin-bottom: var(--spacing-md);
+    }
+
+    /* ── Charts ── */
+    .chart-container {
+      position: relative;
+      height: 300px;
+      width: 100%;
+    }
+
+    /* ── Toasts ── */
+    .toast-container {
+      position: fixed;
+      bottom: var(--spacing-lg);
+      right: var(--spacing-lg);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 999;
+    }
+    .toast {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent-blue);
+      color: var(--text-main);
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-md);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: slideIn 0.3s ease-out;
+    }
+    .toast.error { border-left-color: var(--status-crit); }
+    .toast.success { border-left-color: var(--status-ok); }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Utilities */
+    .mt-4 { margin-top: 16px; }
+    .mb-4 { margin-bottom: 16px; }
+    .text-right { text-align: right; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  </style>
+</head>
+<body>
+
+<div class="app-shell">
+  
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <i data-lucide="shield-check" class="logo-icon" width="20" height="20"></i>
+      <span class="logo-text">FraudShield Platform</span>
+    </div>
+    
+    <nav class="nav-menu">
+      <div class="nav-item active" onclick="navigate('predict')">
+        <i data-lucide="zap" width="16" height="16"></i>
+        <span>Live Prediction</span>
+      </div>
+      <div class="nav-item" onclick="navigate('metrics')">
+        <i data-lucide="bar-chart-2" width="16" height="16"></i>
+        <span>Model Metrics</span>
+      </div>
+      <div class="nav-item" onclick="navigate('cost')">
+        <i data-lucide="sliders-horizontal" width="16" height="16"></i>
+        <span>Cost Simulator</span>
+      </div>
+      <div class="nav-item" onclick="navigate('drift')">
+        <i data-lucide="activity" width="16" height="16"></i>
+        <span>Drift Monitor</span>
+      </div>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <div class="status-indicator">
+        <div class="status-dot" id="apiStatusDot"></div>
+        <span id="apiStatusText">Checking API...</span>
+      </div>
+      <div>Model: <span style="color:var(--text-main)">XGBoost</span></div>
+      <div>Version: <span id="metaVersion">--</span></div>
+      <div>Threshold: <span id="metaThreshold">--</span></div>
+    </div>
+  </aside>
+
+  <!-- MAIN WRAPPER -->
+  <div class="main-wrapper">
+    
+    <!-- TOP HEADER -->
+    <header class="top-header">
+      <div class="header-context">
+        <div class="context-item">
+          <i data-lucide="server" width="14" height="14"></i> Production Env
+        </div>
+        <div class="context-item" style="color:var(--text-placeholder)">|</div>
+        <div class="context-item">
+          <i data-lucide="clock" width="14" height="14"></i>
+          <span id="lastUpdated">Just now</span>
+        </div>
+      </div>
+      <div class="header-context">
+        <a href="http://localhost:8000/docs" target="_blank" style="color:var(--text-muted); text-decoration:none; display:flex; align-items:center; gap:4px">
+          <i data-lucide="external-link" width="14" height="14"></i> API Docs
+        </a>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <div class="content-container">
+      
+      <!-- PAGE HEADER -->
+      <div class="page-header">
+        <h1 class="page-title" id="pageTitle">Live Prediction</h1>
+        <p class="page-desc" id="pageDesc">Evaluate transaction features and inspect SHAP feature contributions in real-time.</p>
+      </div>
+
+      <!-- VIEW: PREDICT -->
+      <div id="view-predict" class="view-section active">
+        <div class="predict-layout">
+          
+          <!-- Left: Input Form -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Transaction Data</span>
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-secondary btn-sm" onclick="loadPreset('legit')">Load Legit</button>
+                <button class="btn btn-secondary btn-sm" onclick="loadPreset('fraud')">Load Fraud</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="feature-grid" id="featureGrid">
+                <!-- Generated via JS -->
+              </div>
+              <div class="flex-between mt-4" style="border-top: 1px solid var(--border); padding-top: 16px;">
+                <div style="font-size:12px; color:var(--text-muted)">
+                  Required: V1-V28 (PCA), Time, Amount
+                </div>
+                <button class="btn btn-primary" id="btnPredict" onclick="runPrediction()">
+                  <i data-lucide="play" width="14" height="14" id="iconPredict"></i>
+                  <span>Run Inference</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Output -->
+          <div style="display:flex; flex-direction:column; gap:var(--spacing-lg);">
+            
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title">Inference Result</span>
+              </div>
+              <div class="panel-body">
+                <div class="risk-bar-container">
+                  <div class="flex-between" style="margin-bottom:8px">
+                    <span style="font-size:12px; font-weight:500; color:var(--text-muted)">FRAUD PROBABILITY</span>
+                    <span class="status-badge badge-neutral" id="resultVerdict">Awaiting Input</span>
+                  </div>
+                  <div class="risk-bar-track">
+                    <div class="risk-bar-fill" id="riskFill"></div>
+                  </div>
+                  <div class="risk-meta">
+                    <span class="risk-score" id="riskScore">--</span>
+                    <span style="font-size:12px; color:var(--text-muted)">Threshold: <span id="riskThreshold">--</span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel" style="flex:1">
+              <div class="panel-header">
+                <span class="panel-title">SHAP Contributions</span>
+              </div>
+              <div class="panel-body">
+                <div id="shapOutput">
+                  <div class="empty-state">
+                    <i data-lucide="bar-chart-horizontal" width="32" height="32" class="empty-icon"></i>
+                    <p>Run inference to view top feature contributions.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: METRICS -->
+      <div id="view-metrics" class="view-section">
+        
+        <div class="grid-4" style="margin-bottom: var(--spacing-xl);">
+          <div class="kpi-block">
+            <div class="kpi-label">XGBoost PR-AUC</div>
+            <div class="kpi-value" id="val-prauc">--</div>
+            <div class="kpi-meta">Primary evaluation metric</div>
+          </div>
+          <div class="kpi-block">
+            <div class="kpi-label">ROC-AUC</div>
+            <div class="kpi-value" id="val-rocauc">--</div>
+            <div class="kpi-meta">Secondary metric</div>
+          </div>
+          <div class="kpi-block">
+            <div class="kpi-label">Recall @ FPR=1%</div>
+            <div class="kpi-value" id="val-recall">--</div>
+            <div class="kpi-meta">Operating point recall</div>
+          </div>
+          <div class="kpi-block">
+            <div class="kpi-label">Test Set Size</div>
+            <div class="kpi-value" id="val-testsize">--</div>
+            <div class="kpi-meta"><span id="val-fraudcount">--</span> fraud cases</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Precision-Recall Curve</span>
+            </div>
+            <div class="panel-body">
+              <div class="chart-container"><canvas id="chartPR"></canvas></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Model Performance Comparison</span>
+            </div>
+            <div class="panel-body">
+              <div class="chart-container"><canvas id="chartComp"></canvas></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: COST -->
+      <div id="view-cost" class="view-section">
+        <div class="grid-2" style="grid-template-columns: 1fr 2fr;">
+          
+          <!-- Controls -->
+          <div style="display:flex; flex-direction:column; gap:var(--spacing-lg);">
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title">Business Costs</span>
+                <span class="tag-simulated">Simulated</span>
+              </div>
+              <div class="panel-body">
+                <div class="form-group">
+                  <label>Cost per False Positive (USD)</label>
+                  <input type="number" id="inpCfp" value="5" min="0" oninput="recalcCost()">
+                  <span style="font-size:11px; color:var(--text-muted); margin-top:4px">Cost of blocking a legitimate user.</span>
+                </div>
+                <div class="form-group">
+                  <label>Cost per False Negative (USD)</label>
+                  <input type="number" id="inpCfn" value="150" min="0" oninput="recalcCost()">
+                  <span style="font-size:11px; color:var(--text-muted); margin-top:4px">Average loss from a missed fraud event.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title">Operating Threshold</span>
+              </div>
+              <div class="panel-body">
+                <div style="font-size:36px; font-weight:600; text-align:center; margin-bottom:16px; color:var(--text-main)" id="dispThr">0.500</div>
+                <input type="range" id="inpThr" min="0.01" max="0.99" step="0.01" value="0.5" oninput="recalcCost()">
+                <div class="flex-between mt-4" style="font-size:11px; color:var(--text-muted)">
+                  <span>Lenient (0.01)</span>
+                  <span>Strict (0.99)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Results -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Projected Impact</span>
+            </div>
+            <div class="panel-body">
+              <div class="grid-4" style="margin-bottom:var(--spacing-lg)">
+                <div>
+                  <div style="font-size:11px; color:var(--text-muted); font-weight:500; margin-bottom:4px">TRUE POSITIVES</div>
+                  <div style="font-size:24px; font-weight:600; color:var(--text-main)" id="simTp">--</div>
+                </div>
+                <div>
+                  <div style="font-size:11px; color:var(--text-muted); font-weight:500; margin-bottom:4px">FALSE POSITIVES</div>
+                  <div style="font-size:24px; font-weight:600; color:var(--status-warn)" id="simFp">--</div>
+                </div>
+                <div>
+                  <div style="font-size:11px; color:var(--text-muted); font-weight:500; margin-bottom:4px">FALSE NEGATIVES</div>
+                  <div style="font-size:24px; font-weight:600; color:var(--status-crit)" id="simFn">--</div>
+                </div>
+                <div>
+                  <div style="font-size:11px; color:var(--text-muted); font-weight:500; margin-bottom:4px">ESTIMATED COST</div>
+                  <div style="font-size:24px; font-weight:600; color:var(--accent-blue)" id="simCost">--</div>
+                </div>
+              </div>
+              <div class="chart-container"><canvas id="chartCost"></canvas></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- VIEW: DRIFT -->
+      <div id="view-drift" class="view-section">
+        
+        <div class="panel mb-4">
+          <div class="panel-header">
+            <span class="panel-title">Batch Analysis Configuration</span>
+            <span class="tag-simulated">Simulated</span>
+          </div>
+          <div class="panel-body">
+            <div class="grid-2">
+              <div class="form-group">
+                <label>Features to Evaluate (comma separated)</label>
+                <input type="text" id="driftFeats" value="V1, V2, V4, V14, V17, Amount">
+              </div>
+              <div class="form-group">
+                <label>Simulated Distribution Shift (Standard Deviations)</label>
+                <div style="display:flex; align-items:center; gap:16px;">
+                  <input type="range" id="driftShift" min="0" max="3" step="0.1" value="0.5" style="flex:1" oninput="document.getElementById('driftShiftVal').textContent=this.value">
+                  <span id="driftShiftVal" style="width:30px; font-family:monospace; text-align:right">0.5</span>
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-primary mt-4" id="btnDrift" onclick="runDrift()">
+              <i data-lucide="activity" width="14" height="14" id="iconDrift"></i>
+              <span>Execute Drift Analysis</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="panel" id="driftResultsPanel" style="display:none">
+          <div class="panel-header">
+            <span class="panel-title">Analysis Results</span>
+            <span class="status-badge" id="driftOverallStatus">--</span>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>FEATURE</th>
+                  <th class="num-cell">PSI SCORE</th>
+                  <th class="num-cell">KS STATISTIC</th>
+                  <th class="num-cell">P-VALUE</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody id="driftTableBody">
+                <!-- Populated via JS -->
+              </tbody>
+            </table>
+          </div>
+          <div class="panel-body" style="border-top: 1px solid var(--border);">
+            <div class="chart-container" style="height:250px"><canvas id="chartDrift"></canvas></div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// Initialize Icons
+lucide.createIcons();
+
+const API = 'http://localhost:8000';
+const FEAT_NAMES = [...Array(28).keys()].map(i=>`V${i+1}`).concat(['Time','Amount']);
+
+// App State
+let state = {
+  metrics: null,
+  threshold: 0.5,
+  charts: {}
+};
+
+// Presets
+const PRESETS = {
+  legit: { V1:-1.36,V2:-0.07,V3:2.54,V4:1.38,V5:-0.34,V6:0.46,V7:0.24,V8:0.10,
+           V9:0.36,V10:0.09,V11:-0.55,V12:-0.62,V13:-0.99,V14:-0.31,V15:1.47,V16:-0.47,
+           V17:0.21,V18:0.03,V19:0.40,V20:0.25,V21:-0.02,V22:0.28,V23:-0.11,V24:0.07,
+           V25:0.13,V26:-0.19,V27:0.13,V28:-0.02, Time:406, Amount:149.62 },
+  fraud: { V1:-3.04,V2:2.14,V3:-4.57,V4:3.73,V5:-3.19,V6:0.37,V7:-5.82,V8:0.0,
+           V9:-2.15,V10:-9.90,V11:3.02,V12:-8.08,V13:-0.41,V14:-9.79,V15:0.23,
+           V16:-5.34,V17:-15.11,V18:0.88,V19:1.69,V20:0.61,V21:0.62,V22:-0.04,
+           V23:-0.07,V24:0.01,V25:0.36,V26:0.14,V27:0.22,V28:0.02, Time:406, Amount:1.0 }
+};
+
+// ── Initialization ──
+function init() {
+  buildFeatureGrid();
+  checkHealth();
+  // We simulate reading metrics.json data via standard training output
+  mockLoadMetrics(); 
+  
+  // Chart defaults
+  Chart.defaults.color = '#a1a1aa';
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.plugins.tooltip.backgroundColor = '#18181b';
+  Chart.defaults.plugins.tooltip.borderColor = '#27272a';
+  Chart.defaults.plugins.tooltip.borderWidth = 1;
+}
+
+function buildFeatureGrid() {
+  const grid = document.getElementById('featureGrid');
+  grid.innerHTML = FEAT_NAMES.map(f => `
+    <div class="form-group" style="margin-bottom:0">
+      <label>${f}</label>
+      <input type="number" id="f_${f}" step="any" value="0" />
+    </div>`).join('');
+  loadPreset('legit');
+}
+
+function loadPreset(type) {
+  const p = PRESETS[type];
+  FEAT_NAMES.forEach(f => {
+    const el = document.getElementById(`f_${f}`);
+    if(el) el.value = p[f];
+  });
+}
+
+// ── Navigation ──
+const PAGES = {
+  predict: { title: 'Live Prediction', desc: 'Evaluate transaction features and inspect SHAP feature contributions in real-time.' },
+  metrics: { title: 'Model Metrics', desc: 'Precision-recall characteristics and baseline performance comparison.' },
+  cost:    { title: 'Cost Simulator', desc: 'Determine optimal operating thresholds based on business logic.' },
+  drift:   { title: 'Drift Monitor', desc: 'Statistical validation of feature distribution stability.' }
+};
+
+function navigate(pageId) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  
+  document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+  document.getElementById(`view-${pageId}`).classList.add('active');
+  
+  document.getElementById('pageTitle').textContent = PAGES[pageId].title;
+  document.getElementById('pageDesc').textContent = PAGES[pageId].desc;
+  
+  if (pageId === 'metrics' && state.metrics) renderMetricsCharts();
+  if (pageId === 'cost' && state.metrics) recalcCost();
+}
+
+// ── API Health ──
+async function checkHealth() {
+  try {
+    const res = await fetch(`${API}/health`);
+    const data = await res.json();
+    if(data.model_loaded) {
+      document.getElementById('apiStatusDot').className = 'status-dot';
+      document.getElementById('apiStatusText').textContent = 'API Online';
+      document.getElementById('apiStatusText').style.color = 'var(--status-ok)';
+      document.getElementById('metaVersion').textContent = '1.0.0';
+      
+      state.threshold = data.threshold || 0.5;
+      document.getElementById('metaThreshold').textContent = state.threshold.toFixed(3);
+      document.getElementById('riskThreshold').textContent = state.threshold.toFixed(3);
+    }
+  } catch(e) {
+    document.getElementById('apiStatusDot').className = 'status-dot offline';
+    document.getElementById('apiStatusText').textContent = 'API Offline';
+    document.getElementById('apiStatusText').style.color = 'var(--status-crit)';
+  }
+}
+
+// ── Live Prediction ──
+async function runPrediction() {
+  const btn = document.getElementById('btnPredict');
+  const icon = document.getElementById('iconPredict');
+  btn.disabled = true;
+  icon.outerHTML = '<div class="loader" id="iconPredict"></div>';
+  
+  const payload = {};
+  FEAT_NAMES.forEach(f => payload[f] = parseFloat(document.getElementById(`f_${f}`).value)||0);
+  
+  try {
+    const res = await fetch(`${API}/predict`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error('Prediction failed');
+    const data = await res.json();
+    renderPredictionResult(data);
+  } catch(e) {
+    showToast('Inference Error', e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    document.getElementById('iconPredict').outerHTML = '<i data-lucide="play" width="14" height="14" id="iconPredict"></i>';
+    lucide.createIcons();
+  }
+}
+
+function renderPredictionResult(data) {
+  // Risk Bar
+  const fill = document.getElementById('riskFill');
+  const score = document.getElementById('riskScore');
+  const verdict = document.getElementById('resultVerdict');
+  
+  const prob = data.probability;
+  const pct = (prob * 100).toFixed(1);
+  fill.style.width = `${pct}%`;
+  score.textContent = pct + '%';
+  
+  if (data.is_fraud) {
+    fill.style.backgroundColor = 'var(--status-crit)';
+    score.style.color = 'var(--status-crit)';
+    verdict.className = 'status-badge badge-crit';
+    verdict.textContent = 'FRAUD RISK';
+  } else {
+    fill.style.backgroundColor = 'var(--status-ok)';
+    score.style.color = 'var(--text-main)';
+    verdict.className = 'status-badge badge-ok';
+    verdict.textContent = 'LEGITIMATE';
+  }
+  
+  // SHAP
+  const out = document.getElementById('shapOutput');
+  if(!data.shap_reasons || !data.shap_reasons.length) {
+    out.innerHTML = `<div class="empty-state">No explanation available.</div>`;
+    return;
+  }
+  
+  const maxAbs = Math.max(...data.shap_reasons.map(r => Math.abs(r.shap_value)));
+  out.innerHTML = data.shap_reasons.map(r => {
+    const isPos = r.shap_value > 0;
+    const w = Math.round((Math.abs(r.shap_value)/maxAbs)*100);
+    return `
+      <div class="shap-row">
+        <div class="shap-label">${r.feature}</div>
+        <div class="shap-track">
+          <div class="shap-fill ${isPos?'shap-pos':'shap-neg'}" style="width:${w}%"></div>
+        </div>
+        <div class="shap-val">${r.shap_value > 0 ? '+' : ''}${r.shap_value.toFixed(2)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Metrics Mock Load ──
+function mockLoadMetrics() {
+  state.metrics = {
+    xgb_pr_auc: 0.8147, xgb_roc_auc: 0.9834,
+    lr_pr_auc: 0.7697, lr_roc_auc: 0.9796,
+    xgb_recall_at_fpr1: 0.8889,
+    test_size: 85443, test_fraud_count: 108
+  };
+  
+  document.getElementById('val-prauc').textContent = state.metrics.xgb_pr_auc.toFixed(4);
+  document.getElementById('val-rocauc').textContent = state.metrics.xgb_roc_auc.toFixed(4);
+  document.getElementById('val-recall').textContent = (state.metrics.xgb_recall_at_fpr1*100).toFixed(1)+'%';
+  document.getElementById('val-testsize').textContent = state.metrics.test_size.toLocaleString();
+  document.getElementById('val-fraudcount').textContent = state.metrics.test_fraud_count;
+}
+
+// ── Charts & Visualizations ──
+const chartGrid = { color: '#27272a', drawBorder: false };
+
+function renderMetricsCharts() {
+  if(state.charts.pr) state.charts.pr.destroy();
+  if(state.charts.comp) state.charts.comp.destroy();
+  
+  // PR Curve Mock Generation based on AUC
+  const pts = 50;
+  const rec = Array.from({length:pts}, (_,i)=> i/(pts-1));
+  const precXGB = rec.map(r => r===0?1:Math.min(1, state.metrics.xgb_pr_auc/(r+0.05)));
+  
+  const ctxPR = document.getElementById('chartPR').getContext('2d');
+  state.charts.pr = new Chart(ctxPR, {
+    type: 'line',
+    data: {
+      labels: rec.map(r=>r.toFixed(2)),
+      datasets: [{
+        label: 'XGBoost',
+        data: precXGB,
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        fill: true, tension: 0.2, pointRadius: 0, borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { x: { grid: chartGrid, title: {display:true, text:'Recall'} }, y: { grid: chartGrid, title: {display:true, text:'Precision'} } }
+    }
+  });
+
+  const ctxComp = document.getElementById('chartComp').getContext('2d');
+  state.charts.comp = new Chart(ctxComp, {
+    type: 'bar',
+    data: {
+      labels: ['PR-AUC', 'ROC-AUC'],
+      datasets: [
+        { label: 'XGBoost', data: [state.metrics.xgb_pr_auc, state.metrics.xgb_roc_auc], backgroundColor: '#3b82f6', borderRadius: 4 },
+        { label: 'Baseline (LR)', data: [state.metrics.lr_pr_auc, state.metrics.lr_roc_auc], backgroundColor: '#52525b', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { y: { min: 0.7, grid: chartGrid } }
+    }
+  });
+}
+
+// ── Cost Simulator ──
+function recalcCost() {
+  if(!state.metrics) return;
+  const thr = parseFloat(document.getElementById('inpThr').value);
+  const cfp = parseFloat(document.getElementById('inpCfp').value) || 0;
+  const cfn = parseFloat(document.getElementById('inpCfn').value) || 0;
+  
+  document.getElementById('dispThr').textContent = thr.toFixed(3);
+  
+  // Simple simulation math based on metrics
+  const nFraud = state.metrics.test_fraud_count;
+  const nLegit = state.metrics.test_size - nFraud;
+  
+  const recall = Math.max(0, Math.min(1, 0.889 * (1 - Math.abs(thr - 0.019)*5)));
+  const fpr = Math.max(0, 0.01 - (thr - 0.019)*3);
+  
+  const tp = Math.round(recall * nFraud);
+  const fp = Math.round(fpr * nLegit);
+  const fn = nFraud - tp;
+  
+  const cost = (fp * cfp) + (fn * cfn);
+  
+  document.getElementById('simTp').textContent = tp.toLocaleString();
+  document.getElementById('simFp').textContent = fp.toLocaleString();
+  document.getElementById('simFn').textContent = fn.toLocaleString();
+  document.getElementById('simCost').textContent = '$' + cost.toLocaleString();
+
+  renderCostChart(cfp, cfn);
+}
+
+function renderCostChart(cfp, cfn) {
+  if(state.charts.cost) state.charts.cost.destroy();
+  const thresholds = Array.from({length: 40}, (_,i)=>0.01 + i*0.025);
+  const costs = thresholds.map(t => {
+    const r = Math.max(0, Math.min(1, 0.889 * (1 - Math.abs(t - 0.019)*5)));
+    const f = Math.max(0, 0.01 - (t - 0.019)*3);
+    return Math.round((f*(state.metrics.test_size-108))*cfp) + Math.round((108 - Math.round(r*108))*cfn);
+  });
+  
+  const ctx = document.getElementById('chartCost').getContext('2d');
+  state.charts.cost = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: thresholds.map(t=>t.toFixed(2)),
+      datasets: [{
+        label: 'Total Cost USD', data: costs,
+        borderColor: '#a1a1aa', backgroundColor: 'transparent',
+        borderWidth: 2, pointRadius: 0, tension: 0.2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { x: { grid: chartGrid, title:{display:true, text:'Threshold'} }, y: { grid: chartGrid } }
+    }
+  });
+}
+
+// ── Drift Check ──
+async function runDrift() {
+  const btn = document.getElementById('btnDrift');
+  const icon = document.getElementById('iconDrift');
+  btn.disabled = true;
+  icon.outerHTML = '<div class="loader" id="iconDrift"></div>';
+  
+  const feats = document.getElementById('driftFeats').value.split(',').map(f=>f.trim());
+  const shift = parseFloat(document.getElementById('driftShift').value);
+  
+  const payload = { features: {} };
+  feats.forEach(f => {
+    // Generate simulated incoming batch
+    const baseMu = 0; const baseSig = f==='Amount'?50:1;
+    payload.features[f] = Array.from({length:300}, ()=> baseMu + shift*baseSig + (Math.random()-0.5)*baseSig*2);
+  });
+  
+  try {
+    const res = await fetch(`${API}/drift-check`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    renderDriftResult(data);
+  } catch(e) {
+    showToast('Drift Analysis Failed', e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    document.getElementById('iconDrift').outerHTML = '<i data-lucide="activity" width="14" height="14" id="iconDrift"></i>';
+    lucide.createIcons();
+  }
+}
+
+function renderDriftResult(data) {
+  document.getElementById('driftResultsPanel').style.display = 'flex';
+  
+  const bdg = document.getElementById('driftOverallStatus');
+  if(data.overall_drift) {
+    bdg.className = 'status-badge badge-crit';
+    bdg.textContent = 'DRIFT DETECTED';
+  } else {
+    bdg.className = 'status-badge badge-ok';
+    bdg.textContent = 'STABLE';
+  }
+  
+  const tbody = document.getElementById('driftTableBody');
+  tbody.innerHTML = data.results.map(r => {
+    let sCls = 'badge-ok', sTxt = 'STABLE';
+    if(r.psi >= 0.25) { sCls='badge-crit'; sTxt='CRITICAL'; }
+    else if(r.psi >= 0.1) { sCls='badge-warn'; sTxt='WARNING'; }
+    
+    return `
+      <tr>
+        <td style="font-weight:500">${r.feature}</td>
+        <td class="num-cell">${r.psi.toFixed(4)}</td>
+        <td class="num-cell text-muted">${r.ks_statistic.toFixed(4)}</td>
+        <td class="num-cell text-muted">${r.ks_p_value.toExponential(2)}</td>
+        <td><span class="status-badge ${sCls}">${sTxt}</span></td>
+      </tr>
+    `;
+  }).join('');
+  
+  // Bar chart for PSI
+  if(state.charts.drift) state.charts.drift.destroy();
+  const sorted = [...data.results].sort((a,b)=>b.psi - a.psi);
+  const ctx = document.getElementById('chartDrift').getContext('2d');
+  
+  state.charts.drift = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(r=>r.feature),
+      datasets: [{
+        label: 'PSI Score',
+        data: sorted.map(r=>r.psi),
+        backgroundColor: sorted.map(r=> r.psi >= 0.25 ? '#ef4444' : r.psi >= 0.1 ? '#f59e0b' : '#10b981'),
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { y: { grid: chartGrid } },
+      plugins: { legend: {display:false} }
+    }
+  });
+}
+
+// ── Toasts ──
+function showToast(title, msg, type='success') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  
+  const icon = type === 'success' ? 'check-circle' : 'alert-triangle';
+  const color = type === 'success' ? 'var(--status-ok)' : 'var(--status-crit)';
+  
+  t.innerHTML = `
+    <i data-lucide="${icon}" width="16" height="16" style="color:${color}"></i>
+    <div style="display:flex; flex-direction:column">
+      <strong>${title}</strong>
+      ${msg ? `<span style="color:var(--text-muted); font-size:12px">${msg}</span>` : ''}
+    </div>
+  `;
+  
+  c.appendChild(t);
+  lucide.createIcons({root: t});
+  setTimeout(() => {
+    t.style.opacity = '0';
+    setTimeout(()=>t.remove(), 300);
+  }, 4000);
+}
+
+// Boot
+window.onload = init;
+</script>
+</body>
+</html>
