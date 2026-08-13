@@ -73,8 +73,14 @@ async def lifespan(app: FastAPI):
         with open(metrics_path) as f:
             m = json.load(f)
         _state["threshold"] = m.get("threshold_at_1pct_fpr", DEFAULT_THRESHOLD)
+        logger.info(f"Decision threshold loaded: {_state['threshold']:.6f}")
     else:
         _state["threshold"] = DEFAULT_THRESHOLD
+        logger.warning(
+            f"metrics.json not found — using DEFAULT_THRESHOLD={DEFAULT_THRESHOLD}. "
+            f"This does NOT match the trained model's operating point. "
+            f"Run train.py to generate metrics.json."
+        )
 
     if _state["model"] is not None:
         logger.info(f"Model loaded: {type(_state['model']).__name__}")
@@ -138,15 +144,6 @@ def _require_model():
         raise HTTPException(status_code=503, detail="Model not loaded. Run train.py first.")
 
 
-def _transaction_to_array(tx: TransactionFeatures) -> np.ndarray:
-    """Convert a TransactionFeatures object → scaled numpy row (1 x 30)."""
-    raw = np.array([getattr(tx, col) for col in FEATURE_ORDER], dtype=float)
-    scaler = _state.get("scaler")
-    if scaler is not None:
-        # Only Time and Amount were scaled during training
-        raw[-2] = scaler.transform([[raw[-2], raw[-1]]])[0][0]
-        raw[-1] = scaler.transform([[raw[-2], raw[-1]]])[0][1]
-    return raw.reshape(1, -1)
 
 
 def _scale_row(raw: np.ndarray) -> np.ndarray:
@@ -210,10 +207,10 @@ async def custom_docs():
 
 @app.get("/", tags=["Meta"])
 def root():
-    """Serve the Enterprise Dashboard UI."""
+    """Root endpoint — serves the frontend dashboard if available, otherwise returns API metadata."""
     frontend_path = os.path.join(BASE_DIR, "frontend", "index.html")
     if os.path.exists(frontend_path):
-        return FileResponse(frontend_path)
+        return FileResponse(frontend_path, media_type="text/html")
     return {
         "service": "Fraud Detection API",
         "version": MODEL_VERSION,

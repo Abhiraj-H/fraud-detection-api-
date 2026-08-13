@@ -18,15 +18,13 @@ services:
     restart: unless-stopped
 
   dashboard:
-    image: python:3.11-slim
-    working_dir: /app
-    command: >
-      sh -c "pip install -q streamlit plotly pandas scikit-learn joblib scipy xgboost &&
-             streamlit run dashboard/app.py --server.port 8501 --server.address 0.0.0.0"
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
     ports:
       - "8501:8501"
     volumes:
-      - .:/app
+      - ./models:/app/models:ro
     depends_on:
       fraud-api:
         condition: service_healthy

@@ -73,6 +73,8 @@ Endpoints:
 | `POST` | `/predict` | Fraud probability + top-3 SHAP reasons |
 | `POST` | `/drift-check` | Per-feature PSI + KS drift report |
 | `GET`  | `/docs` | Swagger UI |
+| `POST` | `/predict-legacy` | Flat 30-float list input (no SHAP). Backward compat. |
+| `POST` | `/drift`           | Single-vector PSI + KS check. Backward compat. |
 
 #### Example predict request
 
