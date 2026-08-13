@@ -125,8 +125,8 @@ Reports p50 / p90 / p99 latency.
 docker-compose up --build
 ```
 
-- API:       http://localhost:8000
-- Dashboard: http://localhost:8501
+**Live API:** https://fraud-detection-api-9u8q.onrender.com  
+**Docs:** https://fraud-detection-api-9u8q.onrender.com/docs
 
 ### 8. Run Tests
 
